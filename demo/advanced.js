@@ -4,8 +4,11 @@ import 'media-chrome/menu';
 import '@pbs/media-preview-hls-iframe';
 import Hls from 'hls.js';
 
+// Local stream is served from Vite's base path: '/' in dev,
+// '/media-preview-hls-iframe/' on GitHub Pages. import.meta.env.BASE_URL
+// always has a trailing slash, so we just append the rest.
 const PRESETS = {
-  'mux-x36xhzz': '/streams/test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+  'mux-x36xhzz': `${import.meta.env.BASE_URL}streams/test-streams.mux.dev/x36xhzz/x36xhzz.m3u8`,
   'apple-bipbop-hevc':
     'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8?88001',
 };
