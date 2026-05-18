@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>&lt;media-preview-hls-iframe&gt; advanced demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        color: #222;
+      }
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      h1 { font-size: 1.25rem; margin: 0; }
+      p { color: #555; }
+      .gh-link {
+        display: inline-flex;
+        color: #555;
+        transition: color 0.15s;
+      }
+      .gh-link:hover { color: #000; }
+      .gh-link svg { width: 24px; height: 24px; fill: currentColor; }
+
+      form.load-form {
+        display: flex;
+        gap: 0.5rem;
+        margin: 1rem 0;
+        flex-wrap: wrap;
+      }
+      form.load-form select,
+      form.load-form input {
+        padding: 0.5rem 0.75rem;
+        font-family: inherit;
+        font-size: 0.9rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+      }
+      form.load-form input { flex: 1; min-width: 0; }
+      form.load-form button {
+        padding: 0.5rem 1rem;
+        font: inherit;
+        background: #222;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      form.load-form button:hover { background: #000; }
+
+      .status {
+        margin: 0.5rem 0 1rem;
+        font-size: 0.85rem;
+        color: #666;
+        display: flex;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .status .label { color: #999; margin-right: 0.25rem; }
+      .status code { font-family: ui-monospace, monospace; }
+
+      media-controller {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        --media-preview-thumbnail-max-width: 480px;
+      }
+      hls-video {
+        --media-object-fit: fill;
+      }
+
+      /* Overlay badge inside the preview popup: shows the time of the
+         currently rendered I-frame (which may not exactly match the hover
+         time, since I-frames are typically a few seconds apart). */
+      .iframe-time-badge {
+        position: absolute;
+        bottom: 4px;
+        left: 4px;
+        padding: 2px 6px;
+        background: rgba(0, 0, 0, 0.75);
+        color: #fff;
+        font-size: 0.7rem;
+        font-family: ui-monospace, monospace;
+        line-height: 1.2;
+        border-radius: 3px;
+        pointer-events: none;
+        letter-spacing: 0.02em;
+      }
+
+      footer {
+        margin-top: 2rem;
+        font-size: 0.85rem;
+        color: #888;
+      }
+      footer a { color: inherit; }
+
+      media-captions-button:not([mediasubtitleslist]) { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="page-header">
+      <h1>&lt;media-preview-hls-iframe&gt; advanced demo</h1>
+      <a class="gh-link" href="https://www.github.com/pbs/media-preview-hls-iframe" target="_blank" rel="noopener" aria-label="View on GitHub" title="View on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
+    <p>Paste an HLS master playlist URL and click <em>Load</em>. Each load fully tears down the previous player. The badge on the preview popup shows the actual time of the rendered I-frame, which may differ from the hover time since I-frames are typically a few seconds apart on the timeline.</p>
+
+    <form class="load-form" id="loadForm">
+      <select id="presetSelect" aria-label="Preset stream">
+        <option value="mux-x36xhzz">Mux x36xhzz (local, synthesized I-frames)</option>
+        <option value="apple-bipbop-hevc">Apple bipbop_adv_example_hevc</option>
+        <option value="custom">Custom URL</option>
+      </select>
+      <input
+        id="urlInput"
+        type="url"
+        spellcheck="false"
+        placeholder="https://example.com/playlist.m3u8"
+        required
+      />
+      <button id="loadBtn" type="submit">Load</button>
+    </form>
+
+    <div class="status">
+      <div><span class="label">URL:</span> <code id="statusUrl">—</code></div>
+      <div><span class="label">Variants:</span> <span id="statusVariants">—</span></div>
+    </div>
+
+    <media-controller id="controller">
+      <hls-video
+        id="video"
+        slot="media"
+        playsinline
+        muted
+        autoplay
+      ></hls-video>
+      <media-rendition-menu hidden anchor="auto"></media-rendition-menu>
+      <media-control-bar>
+        <media-play-button></media-play-button>
+        <media-mute-button></media-mute-button>
+        <media-time-range>
+          <media-preview-hls-iframe slot="preview" id="preview">
+            <div class="iframe-time-badge" id="iframeTimeBadge"></div>
+          </media-preview-hls-iframe>
+          <media-preview-time-display slot="preview"></media-preview-time-display>
+        </media-time-range>
+        <media-time-display showduration></media-time-display>
+        <media-captions-button></media-captions-button>
+        <media-rendition-menu-button></media-rendition-menu-button>
+        <media-fullscreen-button></media-fullscreen-button>
+      </media-control-bar>
+    </media-controller>
+
+    <footer>
+      Default stream: the original HLS manifests at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a> didn't reference I-frames, so new manifests were generated with absolute references back to the Mux <code>.ts</code> segments plus synthesized I-frame byte-ranges. See also the <a href="./">simple demo</a>.
+    </footer>
+
+    <script type="module" src="./advanced.js"></script>
+  </body>
+</html>

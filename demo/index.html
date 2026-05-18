@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>&lt;media-preview-hls-iframe&gt; demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        color: #222;
+      }
+      media-controller {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+      }
+      hls-video {
+        --media-object-fit: fill;
+      }
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+      h1 { font-size: 1.25rem; margin: 0; }
+      p { color: #555; }
+      .gh-link {
+        display: inline-flex;
+        color: #555;
+        transition: color 0.15s;
+      }
+      .gh-link:hover { color: #000; }
+      .gh-link svg { width: 24px; height: 24px; fill: currentColor; }
+      footer {
+        margin-top: 2rem;
+        font-size: 0.85rem;
+        color: #888;
+      }
+      footer a { color: inherit; }
+      media-captions-button:not([mediasubtitleslist]) {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-header">
+      <h1>&lt;media-preview-hls-iframe&gt; demo</h1>
+      <a class="gh-link" href="https://www.github.com/pbs/media-preview-hls-iframe" target="_blank" rel="noopener" aria-label="View on GitHub" title="View on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
+    <p>Hover the time range to see hls.js I-frame trick-play previews. See also the <a href="./advanced.html">advanced demo</a> (custom URLs, I-frame time overlay).</p>
+
+    <media-controller>
+      <hls-video
+        id="video"
+        slot="media"
+        src="/streams/test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        playsinline
+        muted
+        autoplay
+      ></hls-video>
+      <media-rendition-menu hidden anchor="auto"></media-rendition-menu>
+      <media-control-bar>
+        <media-play-button></media-play-button>
+        <media-mute-button></media-mute-button>
+        <media-time-range>
+          <media-preview-hls-iframe slot="preview" id="preview"></media-preview-hls-iframe>
+          <media-preview-time-display slot="preview"></media-preview-time-display>
+        </media-time-range>
+        <media-time-display showduration></media-time-display>
+        <media-captions-button></media-captions-button>
+        <media-rendition-menu-button></media-rendition-menu-button>
+        <media-fullscreen-button></media-fullscreen-button>
+      </media-control-bar>
+    </media-controller>
+
+    <footer>
+      Test stream .ts segments hosted by Mux at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a>.
+    </footer>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+{
+  "name": "@pbs/media-preview-hls-iframe",
+  "version": "0.1.0",
+  "description": "Media Chrome <slot=\"preview\"> add-on that renders hls.js I-frame trick-play previews on time-range hover.",
+  "keywords": [
+    "media-chrome",
+    "hls",
+    "hls.js",
+    "i-frame",
+    "iframe",
+    "trick-play",
+    "scrub",
+    "preview",
+    "thumbnail",
+    "web-component",
+    "custom-element"
+  ],
+  "author": "PBS",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/media-preview-hls-iframe.js",
+  "module": "./dist/media-preview-hls-iframe.js",
+  "types": "./dist/media-preview-hls-iframe.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/media-preview-hls-iframe.d.ts",
+      "import": "./dist/media-preview-hls-iframe.js",
+      "default": "./dist/media-preview-hls-iframe.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/media-preview-hls-iframe.js",
+    "src/media-preview-hls-iframe.d.ts",
+    "src/index.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite -c demo/vite.config.js",
+    "build": "vite build",
+    "build:demo": "vite build -c demo/vite.config.js",
+    "preview:demo": "vite preview -c demo/vite.config.js",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "hls-video-element": "^1.5.11",
+    "media-chrome": "^4.19.0",
+    "vite": "^5.4.10"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>hls.js I-frame trick-play test (PR #7757)</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>hls.js I-frame trick-play test</h1>
+      <p>
+        Exercises
+        <a href="https://github.com/video-dev/hls.js/pull/7757" target="_blank" rel="noopener">PR #7757</a>
+        (<code>#EXT-X-I-FRAME-STREAM-INF</code> + <code>#EXT-X-I-FRAMES-ONLY</code>).
+      </p>
+    </header>
+
+    <section class="source">
+      <label>
+        Preset:
+        <select id="presetSelect">
+          <option value="bipbop-ts">Apple bipbop_16x9 — TS I-frames (byte-range)</option>
+          <option value="adv-fmp4">Apple adv_dv_atmos — fMP4 I-frames (AVC + HEVC + mjpg)</option>
+          <option value="ireplay-live">iReplay Blender — LIVE fMP4 I-frames (1080p60)</option>
+          <option value="custom">Custom URL</option>
+        </select>
+      </label>
+      <input id="urlInput" type="url" placeholder="HLS master playlist URL (.m3u8)" spellcheck="false" />
+      <button id="loadBtn" type="button">Load</button>
+    </section>
+
+    <section class="players">
+      <div class="player">
+        <media-controller>
+          <hls-video id="mainVideo" slot="media" playsinline></hls-video>
+          <media-control-bar>
+            <media-play-button></media-play-button>
+            <media-mute-button></media-mute-button>
+            <media-volume-range></media-volume-range>
+            <media-time-range>
+              <media-preview-hls-iframe slot="preview" id="hoverPreview"></media-preview-hls-iframe>
+            </media-time-range>
+            <media-time-display showduration></media-time-display>
+            <media-playback-rate-button></media-playback-rate-button>
+            <media-pip-button></media-pip-button>
+            <media-fullscreen-button></media-fullscreen-button>
+          </media-control-bar>
+        </media-controller>
+      </div>
+    </section>
+
+    <section class="diagnostics">
+      <div class="panel">
+        <h3>
+          I-frame variants (from <code>hls.iframeVariants</code>)
+          <small id="iframeStatus">(waiting…)</small>
+        </h3>
+        <ul id="variantsReadout"><li><em>waiting for manifest…</em></li></ul>
+      </div>
+      <div class="panel">
+        <h3>Event log</h3>
+        <ol id="eventLog" reversed></ol>
+      </div>
+    </section>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

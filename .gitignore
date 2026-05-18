@@ -1,0 +1,8 @@
+node_modules/
+/dist/
+/dist-demo/
+.DS_Store
+*.log
+.vite/
+# vendor/hls.js/dist/hls.mjs is intentionally committed — temporary hand-copy
+# pending an upstream npm release with the I-frame trick-play API.
