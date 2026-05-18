@@ -17,10 +17,10 @@ function whenApiReady(el) {
   });
 }
 
-const hls = await whenApiReady(video);
-
-hls.once(Hls.Events.INIT_PTS_FOUND, () => {
-  if (hls.iframeVariants?.length) {
-    preview.player = hls.createIFramePlayer();
-  }
+whenApiReady(video).then((hls) => {
+  hls.once(Hls.Events.INIT_PTS_FOUND, () => {
+    if (hls.iframeVariants?.length) {
+      preview.player = hls.createIFramePlayer();
+    }
+  });
 });
