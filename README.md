@@ -5,7 +5,7 @@ A [Media Chrome](https://github.com/muxinc/media-chrome) preview-slot add-on tha
 ## Install
 
 ```bash
-npm install @pbs/media-preview-hls-iframe
+npm install media-preview-hls-iframe
 ```
 
 ## Usage
@@ -16,7 +16,7 @@ Drop it into Media Chrome's `<media-time-range>` preview slot. Pair it with [`<h
 <script type="module">
   import 'hls-video-element';
   import 'media-chrome';
-  import '@pbs/media-preview-hls-iframe';
+  import 'media-preview-hls-iframe';
 </script>
 
 <media-controller>

@@ -18,6 +18,7 @@ async function activeRowInfo(page: import('@playwright/test').Page) {
       total: rows.length,
       activeCount: rows.filter((r) => r.classList.contains('active')).length,
       activeUrl: active?.dataset.url ?? null,
+      activeIndex: active?.dataset.index ?? null,
       activeFontWeight: active
         ? window.getComputedStyle(active.querySelector('td')!).fontWeight
         : null,
@@ -25,6 +26,7 @@ async function activeRowInfo(page: import('@playwright/test').Page) {
       playerLevelWidth: level?.width ?? null,
       playerLevelHeight: level?.height ?? null,
       hasAttachImage: typeof player?.attachImage === 'function',
+      statusText: document.getElementById('iframePlayerStatus')?.textContent ?? '',
     };
   });
 }
@@ -63,6 +65,9 @@ test('PBS test pattern (video iframe player) bolds the active row', async ({
   expect(info.playerLevelUrls).toContain(info.activeUrl);
   expect(+info.activeFontWeight!).toBeGreaterThanOrEqual(600);
   expect(info.hasAttachImage).toBe(false);
+  // Status text references the variant index from the table, not the
+  // iframe instance's internal level index (which can differ).
+  expect(info.statusText).toMatch(new RegExp(`\\bvariant ${info.activeIndex}\\b`));
 });
 
 test('apple-bipbop-hevc: bolded row matches the player level even when the variants table includes codec-paired entries', async ({
@@ -96,6 +101,7 @@ test('apple-bipbop-hevc: bolded row matches the player level even when the varia
   expect(info.activeUrl).not.toBeNull();
   expect(info.playerLevelUrls).toContain(info.activeUrl);
   expect(+info.activeFontWeight!).toBeGreaterThanOrEqual(600);
+  expect(info.statusText).toMatch(new RegExp(`\\bvariant ${info.activeIndex}\\b`));
 });
 
 test('adv_dv_atmos (image MJPG iframe player) bolds the MJPG variant row', async ({
@@ -127,4 +133,5 @@ test('adv_dv_atmos (image MJPG iframe player) bolds the MJPG variant row', async
   expect(info.playerLevelUrls).toContain(info.activeUrl);
   expect(+info.activeFontWeight!).toBeGreaterThanOrEqual(600);
   expect(info.hasAttachImage).toBe(true);
+  expect(info.statusText).toMatch(new RegExp(`\\bvariant ${info.activeIndex}\\b`));
 });

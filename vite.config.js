@@ -63,7 +63,7 @@ const libraryConfig = {
   ],
 };
 
-// Both demos resolve `@pbs/media-preview-hls-iframe` to the same file the
+// Both demos resolve `media-preview-hls-iframe` to the same file the
 // static index.html importmap points to. Run `npm run build` first so the
 // alias target exists.
 const demoConfig = {
@@ -72,7 +72,7 @@ const demoConfig = {
   resolve: {
     alias: [
       {
-        find: /^@pbs\/media-preview-hls-iframe$/,
+        find: /^media-preview-hls-iframe$/,
         replacement: resolve(__dirname, 'demo/lib/media-preview-hls-iframe.js'),
       },
     ],

@@ -2,7 +2,7 @@ import 'hls-video-element';
 import 'media-chrome';
 import 'media-chrome/menu';
 import { MediaRenditionMenu } from 'media-chrome/menu';
-import '@pbs/media-preview-hls-iframe';
+import 'media-preview-hls-iframe';
 import Hls from 'hls.js';
 
 document.getElementById('hlsVersion').textContent = `v${Hls.version}`;
@@ -133,19 +133,43 @@ function renderVariants(variants) {
     // single Level with multiple URLs, and image players use a filtered
     // subset of variants so indices don't line up either.
     if (v.url) tr.dataset.url = v.url;
+    tr.dataset.index = String(i);
     tr.innerHTML = `<td>${i}</td><td>${res}</td><td>${bitrate}</td><td>${codec || '—'}</td>`;
     variantsBody.appendChild(tr);
   });
 }
 
+// Toggles the bold row in the variants table and returns the matched row
+// (or null), so callers can derive the variant index for the status line.
 function highlightActiveVariant(player) {
   const rows = variantsBody.querySelectorAll('tr[data-url]');
   const level = player?.levels?.[player.currentLevel];
   const levelUrls = level?.url || (level?.uri ? [level.uri] : []);
+  let activeRow = null;
   rows.forEach((tr) => {
     const matches = levelUrls.includes(tr.dataset.url);
     tr.classList.toggle('active', matches);
+    if (matches) activeRow = tr;
   });
+  return activeRow;
+}
+
+// Status line for the I-frame variants panel. Prefers the variant # from the
+// table (i.e. the index in hls.iframeVariants on the main player) over the
+// iframe instance's internal level index, since those don't agree for
+// codec-paired manifests or image (MJPG) players.
+function formatPlayerStatus(player, isImage) {
+  const activeRow = highlightActiveVariant(player);
+  const level = player?.levels?.[player.currentLevel];
+  const dims = level
+    ? `${level.width || '?'}×${level.height || '?'}`
+    : '';
+  const prefix = isImage ? 'image ' : '';
+  if (activeRow) {
+    return `${prefix}variant ${activeRow.dataset.index}${dims ? `: ${dims}` : ''}`;
+  }
+  if (level) return `${prefix}level ${player.currentLevel}: ${dims}`;
+  return `${prefix}(no level yet)`;
 }
 
 function setIframePlayerStatus(text) {
@@ -157,9 +181,8 @@ function attachIframePlayerLoggers(player) {
     log('LEVEL_LOADED', { level: d.level, live: d.details?.live, frags: d.details?.fragments?.length }));
   player.on(Hls.Events.LEVEL_SWITCHED, (_, d) => {
     log('LEVEL_SWITCHED', { level: d.level });
-    const lvl = player.levels?.[d.level];
-    if (lvl) setIframePlayerStatus(`level ${d.level}: ${lvl.width || '?'}×${lvl.height || '?'}`);
-    highlightActiveVariant(player);
+    const isImage = typeof player.attachImage === 'function';
+    setIframePlayerStatus(formatPlayerStatus(player, isImage));
   });
   player.on(Hls.Events.FRAG_BUFFERED, (_, d) =>
     log('FRAG_BUFFERED', { sn: d.frag?.sn, start: +d.frag?.start?.toFixed?.(2), file: shortenUrl(d.frag?.url) }));
@@ -281,9 +304,8 @@ preview.addEventListener('iframe-player-ready', (e) => {
   // attachImage is only present on HlsImageIFramesOnly (MJPG image I-frames).
   const isImage = typeof player.attachImage === 'function';
   log(isImage ? 'createImageIFramePlayer' : 'createIFramePlayer', { level: player.currentLevel });
-  setIframePlayerStatus(`${isImage ? 'image ' : ''}level ${player.currentLevel}`);
   attachIframePlayerLoggers(player);
-  highlightActiveVariant(player);
+  setIframePlayerStatus(formatPlayerStatus(player, isImage));
 });
 
 // frame-rendered fires on every internal preview <video> 'seeked', so this

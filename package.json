@@ -1,5 +1,5 @@
 {
-  "name": "@pbs/media-preview-hls-iframe",
+  "name": "media-preview-hls-iframe",
   "version": "0.1.0",
   "description": "Media Chrome <slot=\"preview\"> add-on that renders hls.js I-frame trick-play previews on time-range hover.",
   "keywords": [
@@ -58,8 +58,5 @@
   },
   "overrides": {
     "hls.js": "$hls.js"
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }
