@@ -30,15 +30,15 @@
   },
   "files": [
     "dist",
-    "src/media-preview-hls-iframe.js",
-    "src/media-preview-hls-iframe.d.ts",
-    "src/index.js",
+    "src/media-preview-hls-iframe.ts",
+    "src/index.ts",
     "LICENSE",
     "README.md"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode library",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build --mode library && tsc",
     "build:demo": "npm run build && vite build",
     "preview:demo": "vite preview",
     "prepublishOnly": "npm run build"
@@ -47,6 +47,7 @@
     "hls-video-element": "^1.5.11",
     "hls.js": "canary",
     "media-chrome": "^4.19.0",
+    "typescript": "^6.0.3",
     "vite": "^5.4.10"
   },
   "overrides": {
