@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>hls.js I-Frame Playlist repro</title>
+  <style>
+    body { font-family: monospace; margin: 16px; }
+    .row { display: flex; gap: 16px; align-items: flex-start; }
+    video { background: #000; display: block; }
+    #main { width: 640px; height: 360px; }
+    #iframe { width: 320px; height: 180px; }
+    #log { width: 100%; height: 240px; font-size: 12px; }
+    .controls { margin: 8px 0; }
+    .controls input[type=range] { width: 640px; }
+    .stat { color: #555; }
+    .picker { margin: 8px 0 16px; }
+    .picker select { font-family: monospace; font-size: 13px; padding: 4px; min-width: 480px; }
+  </style>
+</head>
+<body>
+  <h3>hls.js I-Frame Playlist Test Harness</h3>
+  <div class="picker">
+    <label>Stream:
+      <select id="stream"></select>
+    </label>
+  </div>
+  <div class="stat" id="info">loading...</div>
+
+  <div class="row">
+    <div>
+      <video id="main" controls playsinline muted></video>
+      <div class="controls">
+        <label>I-Frame scrub (loadMediaAt): <span id="t">0.00</span>s</label><br>
+        <input id="scrub" type="range" min="0" max="0" step="0.04" value="0" disabled>
+      </div>
+    </div>
+    <div>
+      <div class="stat">I-Frame preview</div>
+      <video id="iframe" muted></video>
+      <div class="stat" id="ifstat">not initialized</div>
+    </div>
+  </div>
+
+  <h4>Event log</h4>
+  <textarea id="log" readonly></textarea>
+
+  <!-- Pin to the canary version with the new I-frame player API -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@canary/dist/hls.js"></script>
+  <script>
+    const STREAMS = [
+      { name: 'kothdt (live passthrough)', url: 'https://kothdt.lls.pbs.org/lls/kothdt/kothdt-hls-passthrough/index.m3u8' },
+      { name: 'pbs-bars (test pattern hevc/avc)', url: 'https://pbs.github.io/test-streams/pbs/test-pattern/pbs-bars_hevc-avc.m3u8' },
+      { name: 'snp_raronson (transparency 1080p)', url: 'https://ga.video.cdn.pbs.org/videos/pbs-standards/cd8831d8-2d76-4b8b-a271-02178645a4c0/2000257050/hd-16x9-mezzanine-1080p/snp_raronson_transparency-hls-16x9-1080p_881.m3u8' },
+      { name: 'aucl5104 (austin city limits)', url: 'https://ga.pbs-video.pbs.org/videos/austin-city-limits/ba4b5e59-c676-40b5-9827-09c0a6c9fdad/2000497362/hd-16x9-mezzanine-1080p/aucl5104-AABR-AVC_645.m3u8' },
+      { name: 'aucl5012 (austin city limits)', url: 'https://ga.pbs-video.pbs.org/videos/austin-city-limits/d21d75af-6ff1-45ea-8e5e-eb57a2026c60/2000461464/hd-16x9-mezzanine-1080p/aucl5012-AABR-AVC_908.m3u8' },
+    ];
+
+    const $log = document.getElementById('log');
+    const $info = document.getElementById('info');
+    const $ifstat = document.getElementById('ifstat');
+    const $scrub = document.getElementById('scrub');
+    const $t = document.getElementById('t');
+    const $stream = document.getElementById('stream');
+    const mainVideo = document.getElementById('main');
+    const iframeVideo = document.getElementById('iframe');
+
+    const log = (...args) => {
+      const line = `[${(performance.now() / 1000).toFixed(2)}s] ${args.join(' ')}`;
+      console.log(line);
+      $log.value += line + '\n';
+      $log.scrollTop = $log.scrollHeight;
+    };
+
+    // populate stream picker
+    STREAMS.forEach((s, i) => {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = s.name;
+      $stream.appendChild(opt);
+    });
+
+    let hls = null;
+    let hlsIframesOnly = null;
+
+    function teardown() {
+      if (hlsIframesOnly) {
+        try { hlsIframesOnly.destroy(); } catch (e) { log(`teardown iframe player: ${e}`); }
+        hlsIframesOnly = null;
+      }
+      if (hls) {
+        try { hls.destroy(); } catch (e) { log(`teardown main hls: ${e}`); }
+        hls = null;
+      }
+      // reset media elements so previous frames aren't left visible
+      mainVideo.removeAttribute('src');
+      mainVideo.load();
+      iframeVideo.removeAttribute('src');
+      iframeVideo.load();
+      // reset UI state
+      $scrub.value = 0;
+      $scrub.max = 0;
+      $scrub.step = 0.04;
+      $scrub.disabled = true;
+      $t.textContent = '0.00';
+      $ifstat.textContent = 'not initialized';
+      $log.value = '';
+    }
+
+    function load(src) {
+      teardown();
+      log(`loading ${src}`);
+      $info.textContent = `hls.js ${Hls.version} — ${src}`;
+
+      if (!Hls.isSupported()) {
+        log('Hls.isSupported() === false; aborting');
+        return;
+      }
+
+      hls = new Hls({
+        debug: false,
+        capLevelToPlayerSize: true, // required for I-frame level selection by dim
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
+        log(`MANIFEST_PARSED | levels=${data.levels.length} iframeVariants=${hls.iframeVariants?.length ?? 'undefined'}`);
+        if (!hls.iframeVariants || hls.iframeVariants.length === 0) {
+          log('!! No iframeVariants on parsed manifest — feature cannot be exercised');
+        } else {
+          hls.iframeVariants.forEach((v, i) => {
+            log(`  iframeVariant[${i}] bw=${v.bitrate} res=${v.width}x${v.height} url=${v.url}`);
+          });
+        }
+      });
+
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        log(`MAIN ERROR | type=${data.type} details=${data.details} fatal=${data.fatal}`);
+      });
+
+      hls.once(Hls.Events.INIT_PTS_FOUND, () => {
+        log('INIT_PTS_FOUND — creating I-frame player');
+        createIframePlayer();
+      });
+
+      hls.loadSource(src);
+      hls.attachMedia(mainVideo);
+
+      // expose for devtools
+      window.hls = hls;
+      window.getIframePlayer = () => hlsIframesOnly;
+    }
+
+    function createIframePlayer() {
+      if (!hls.iframeVariants || !hls.iframeVariants.length) {
+        $ifstat.textContent = 'no iframeVariants on source';
+        log('skip createIFramePlayer — no iframeVariants');
+        return;
+      }
+      hlsIframesOnly = hls.createIFramePlayer();
+      if (!hlsIframesOnly) {
+        $ifstat.textContent = 'createIFramePlayer() returned null';
+        log('createIFramePlayer() returned null');
+        return;
+      }
+      log('createIFramePlayer OK; attaching media + startLoad');
+      $ifstat.textContent = 'attached';
+
+      hlsIframesOnly.attachMedia(iframeVideo);
+      hlsIframesOnly.startLoad();
+
+      hlsIframesOnly.once(Hls.Events.LEVEL_UPDATED, (_, data) => {
+        const frags = data?.details?.fragments ?? [];
+        log(`IF LEVEL_UPDATED | fragments=${frags.length}`);
+        if (frags.length) {
+          const last = frags[frags.length - 1];
+          const totalDur = last.start + last.duration;
+          $scrub.max = totalDur.toFixed(3);
+          $scrub.step = (frags[0].duration / 4).toFixed(3);
+          $scrub.disabled = false;
+          log(`  scrub range: 0..${totalDur.toFixed(2)}s, first frag dur=${frags[0].duration}`);
+        }
+      });
+
+      hlsIframesOnly.on(Hls.Events.FRAG_BUFFERED, (_, data) => {
+        log(`IF FRAG_BUFFERED | sn=${data.frag.sn} start=${data.frag.start.toFixed(2)} dur=${data.frag.duration.toFixed(2)}`);
+      });
+
+      hlsIframesOnly.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+        log(`IF LEVEL_SWITCHED | level=${data.level}`);
+      });
+
+      hlsIframesOnly.on(Hls.Events.ERROR, (_, data) => {
+        log(`IF ERROR | type=${data.type} details=${data.details} fatal=${data.fatal} name=${data.error?.name ?? ''}`);
+      });
+    }
+
+    // --- scrubber drives loadMediaAt; we do NOT set currentTime directly ---
+    $scrub.addEventListener('input', () => {
+      const t = parseFloat($scrub.value);
+      $t.textContent = t.toFixed(2);
+      if (hlsIframesOnly) {
+        hlsIframesOnly.loadMediaAt(t);
+      }
+    });
+
+    // observe when the iframe element actually renders the new frame
+    iframeVideo.addEventListener('seeked', () => {
+      log(`IF <video> seeked → currentTime=${iframeVideo.currentTime.toFixed(3)}`);
+    });
+
+    $stream.addEventListener('change', () => {
+      load(STREAMS[Number($stream.value)].url);
+    });
+
+    // initial load
+    load(STREAMS[0].url);
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+name: Verify
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  built-demo-in-sync:
+    name: demo/lib/ matches src/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Check demo/lib/ has no drift
+        run: |
+          if ! git diff --exit-code -- demo/lib/; then
+            echo "::error::demo/lib/ is out of date — run 'npm run build' locally and commit the result."
+            exit 1
+          fi

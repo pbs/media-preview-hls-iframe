@@ -7,7 +7,7 @@
     <style>
       body {
         font-family: system-ui, sans-serif;
-        max-width: 1200px;
+        max-width: 1150px;
         margin: 2rem auto;
         padding: 0 1rem;
         color: #222;
@@ -101,6 +101,116 @@
       footer a { color: inherit; }
 
       media-captions-button:not([mediasubtitleslist]) { display: none; }
+
+      .diagnostics {
+        margin-top: 1.25rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        gap: 1rem;
+      }
+      @media (max-width: 900px) {
+        .diagnostics { grid-template-columns: 1fr; }
+      }
+      .panel {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: #fafafa;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .panel h2 {
+        margin: 0;
+        padding: 0.5rem 0.75rem;
+        background: #f1f1f1;
+        border-bottom: 1px solid #ddd;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #444;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 0.5rem;
+      }
+      .panel h2 small {
+        color: #999;
+        font-weight: 400;
+        font-size: 0.75rem;
+        font-family: ui-monospace, monospace;
+      }
+      .panel h2 button {
+        background: transparent;
+        border: 1px solid #ccc;
+        color: #555;
+        font: inherit;
+        font-size: 0.7rem;
+        font-weight: 400;
+        padding: 1px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      .panel h2 button:hover { background: #e8e8e8; }
+      .panel .panel-body {
+        padding: 0.5rem 0.75rem;
+        overflow: auto;
+        flex: 1;
+      }
+
+      table.variants {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: ui-monospace, monospace;
+        font-size: 0.75rem;
+      }
+      table.variants th,
+      table.variants td {
+        text-align: left;
+        padding: 3px 6px;
+        border-bottom: 1px solid #eee;
+        white-space: nowrap;
+      }
+      table.variants th {
+        color: #777;
+        font-weight: 500;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      table.variants td.url {
+        max-width: 18em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #777;
+      }
+      table.variants tr.muted td { color: #aaa; font-style: italic; }
+
+      ol.event-log {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-family: ui-monospace, monospace;
+        font-size: 0.72rem;
+        max-height: 22rem;
+      }
+      ol.event-log li {
+        padding: 2px 0;
+        border-bottom: 1px dotted #e8e8e8;
+        display: grid;
+        grid-template-columns: 13ch 20ch minmax(0, 1fr);
+        gap: 0.5rem;
+        align-items: baseline;
+      }
+      ol.event-log .ts { color: #aaa; }
+      ol.event-log .tag {
+        font-weight: 600;
+        color: #555;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      ol.event-log .tag.err { color: #c00; }
+      ol.event-log .tag.preview { color: #07a; }
+      ol.event-log .body { color: #444; word-break: break-word; }
     </style>
   </head>
   <body>
@@ -110,12 +220,14 @@
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       </a>
     </div>
-    <p>Paste an HLS master playlist URL and click <em>Load</em>. Each load fully tears down the previous player. The badge on the preview popup shows the actual time of the rendered I-frame, which may differ from the hover time since I-frames are typically a few seconds apart on the timeline.</p>
 
     <form class="load-form" id="loadForm">
       <select id="presetSelect" aria-label="Preset stream">
-        <option value="mux-x36xhzz">Mux x36xhzz (local, synthesized I-frames)</option>
+        <option value="pbs-test-pattern">PBS test pattern (HEVC, AVC, I-frame-only)</option>
+        <option value="bbb-iframes">Big Buck Bunny (Mux hosted, synthesized I-frames)</option>
         <option value="apple-bipbop-hevc">Apple bipbop_adv_example_hevc</option>
+        <option value="apple-adv-dv-atmos">Apple adv_dv_atmos (Dolby Vision + Atmos + iFrames)</option>
+        <option value="ireplay-blender">iReplay Blender demo stream</option>
         <option value="custom">Custom URL</option>
       </select>
       <input
@@ -128,11 +240,6 @@
       <button id="loadBtn" type="submit">Load</button>
     </form>
 
-    <div class="status">
-      <div><span class="label">URL:</span> <code id="statusUrl">—</code></div>
-      <div><span class="label">Variants:</span> <span id="statusVariants">—</span></div>
-    </div>
-
     <media-controller id="controller">
       <hls-video
         id="video"
@@ -141,7 +248,7 @@
         muted
         autoplay
       ></hls-video>
-      <media-rendition-menu hidden anchor="auto"></media-rendition-menu>
+      <media-rendition-codec-menu id="renditionMenu" hidden anchor="auto"></media-rendition-codec-menu>
       <media-control-bar>
         <media-play-button></media-play-button>
         <media-mute-button></media-mute-button>
@@ -153,13 +260,35 @@
         </media-time-range>
         <media-time-display showduration></media-time-display>
         <media-captions-button></media-captions-button>
-        <media-rendition-menu-button></media-rendition-menu-button>
+        <media-rendition-menu-button invoketarget="renditionMenu"></media-rendition-menu-button>
         <media-fullscreen-button></media-fullscreen-button>
       </media-control-bar>
     </media-controller>
 
+    <section class="diagnostics">
+      <div class="panel">
+        <h2>I-frame variants <small id="iframePlayerStatus">(no player)</small></h2>
+        <div class="panel-body">
+          <table class="variants">
+            <thead>
+              <tr><th>#</th><th>Resolution</th><th>Bitrate</th><th>Codec</th></tr>
+            </thead>
+            <tbody id="variantsBody">
+              <tr class="muted"><td colspan="4">waiting for manifest…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Event log <button id="clearLogBtn" type="button">clear</button></h2>
+        <div class="panel-body">
+          <ol class="event-log" id="eventLog" reversed></ol>
+        </div>
+      </div>
+    </section>
+
     <footer>
-      Default stream: the original HLS manifests at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a> didn't reference I-frames, so new manifests were generated with absolute references back to the Mux <code>.ts</code> segments plus synthesized I-frame byte-ranges. See also the <a href="./">simple demo</a>.
+      See also the <a href="./">simple demo</a>. · hls.js <code id="hlsVersion">…</code>
     </footer>
 
     <script type="module" src="./advanced.js"></script>

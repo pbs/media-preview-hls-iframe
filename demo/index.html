@@ -40,9 +40,6 @@
         color: #888;
       }
       footer a { color: inherit; }
-      media-captions-button:not([mediasubtitleslist]) {
-        display: none;
-      }
     </style>
   </head>
   <body>
@@ -63,7 +60,6 @@
         muted
         autoplay
       ></hls-video>
-      <media-rendition-menu hidden anchor="auto"></media-rendition-menu>
       <media-control-bar>
         <media-play-button></media-play-button>
         <media-mute-button></media-mute-button>
@@ -72,8 +68,6 @@
           <media-preview-time-display slot="preview"></media-preview-time-display>
         </media-time-range>
         <media-time-display showduration></media-time-display>
-        <media-captions-button></media-captions-button>
-        <media-rendition-menu-button></media-rendition-menu-button>
         <media-fullscreen-button></media-fullscreen-button>
       </media-control-bar>
     </media-controller>
@@ -82,6 +76,30 @@
       Test stream .ts segments hosted by Mux at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a>.
     </footer>
 
-    <script type="module" src="./main.js"></script>
+    <!-- Raw jsdelivr ESM (no `+esm` rebundling) keeps bare imports intact so
+         the importmap can rewrite them. The `hls.js/` trailing-slash entry
+         catches hls-video-element's `import 'hls.js/dist/hls.mjs'` and pins
+         it to canary — the only build with the I-frame trick-play API
+         (PR #7757). custom-media-element + media-tracks are transitive deps
+         of hls-video-element. The @pbs/... entry points at the sibling
+         lib/ folder, populated by `npm run build`; after publication, swap
+         it for the CDN URL. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "hls.js/": "https://cdn.jsdelivr.net/npm/hls.js@canary/",
+          "custom-media-element": "https://cdn.jsdelivr.net/npm/custom-media-element/dist/custom-media-element.js",
+          "media-tracks": "https://cdn.jsdelivr.net/npm/media-tracks/dist/index.js",
+          "media-chrome": "https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js",
+          "hls-video-element": "https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js",
+          "@pbs/media-preview-hls-iframe": "./lib/media-preview-hls-iframe.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import 'media-chrome';
+      import 'hls-video-element';
+      import '@pbs/media-preview-hls-iframe';
+    </script>
   </body>
 </html>

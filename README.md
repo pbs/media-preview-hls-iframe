@@ -1,18 +1,6 @@
 # `<media-preview-hls-iframe>`
 
-A [Media Chrome](https://github.com/muxinc/media-chrome) preview-slot add-on that renders [hls.js](https://github.com/video-dev/hls.js) I-frame trick-play previews on `<media-time-range>` hover. No runtime dependencies.
-
-```html
-<media-time-range>
-  <media-preview-hls-iframe slot="preview" id="hoverPreview"></media-preview-hls-iframe>
-</media-time-range>
-```
-
-```js
-hoverPreview.player = hls.createIFramePlayer();
-```
-
-The element observes Media Chrome's `mediapreviewtime` attribute and calls `player.loadMediaAt(t)` for each hover. The "player" is duck-typed against `{ attachMedia, startLoad, loadMediaAt }`, matching hls.js's `HlsIFramesOnly` — but anything with that surface works.
+A [Media Chrome](https://github.com/muxinc/media-chrome) preview-slot add-on that renders [hls.js](https://github.com/video-dev/hls.js) I-frame trick-play previews on `<media-time-range>` hover. 
 
 ## Install
 
@@ -20,21 +8,9 @@ The element observes Media Chrome's `mediapreviewtime` attribute and calls `play
 npm install @pbs/media-preview-hls-iframe
 ```
 
-Then either side-effect import (most common — registers the custom element):
-
-```js
-import '@pbs/media-preview-hls-iframe';
-```
-
-Or named import if you want the class for subclassing / feature detection:
-
-```js
-import { MediaPreviewHlsIframe } from '@pbs/media-preview-hls-iframe';
-```
-
 ## Usage
 
-Drop it into Media Chrome's `<media-time-range>` preview slot. Pair it with your media element of choice — the example below uses [`<hls-video>`](https://github.com/muxinc/media-elements/tree/main/packages/hls-video-element):
+Drop it into Media Chrome's `<media-time-range>` preview slot. Pair it with [`<hls-video>`](https://github.com/muxinc/media-elements/tree/main/packages/hls-video-element):
 
 ```html
 <script type="module">
@@ -44,32 +20,16 @@ Drop it into Media Chrome's `<media-time-range>` preview slot. Pair it with your
 </script>
 
 <media-controller>
-  <hls-video id="mainVideo" slot="media" src="…/master.m3u8" playsinline></hls-video>
+  <hls-video slot="media" src="…/master.m3u8" playsinline></hls-video>
   <media-control-bar>
     <media-play-button></media-play-button>
     <media-time-range>
-      <media-preview-hls-iframe slot="preview" id="hoverPreview"></media-preview-hls-iframe>
+      <media-preview-hls-iframe slot="preview"></media-preview-hls-iframe>
       <media-preview-time-display slot="preview"></media-preview-time-display>
     </media-time-range>
-    <media-time-display showduration></media-time-display>
   </media-control-bar>
 </media-controller>
 ```
-
-Once `<hls-video>`'s internal hls.js instance has an `HlsIFramesOnly` player available (typically after `Events.INIT_PTS_FOUND`), hand it over:
-
-```js
-const hlsVideo = document.getElementById('mainVideo');
-const preview = document.getElementById('hoverPreview');
-
-hlsVideo.api.once(Hls.Events.INIT_PTS_FOUND, () => {
-  if (hlsVideo.api.iframeVariants?.length) {
-    preview.player = hlsVideo.api.createIFramePlayer();
-  }
-});
-```
-
-After assignment, the component calls `attachMedia(internalVideo)` + `startLoad()` automatically and renders frames on every hover.
 
 ## Requirements
 
@@ -77,24 +37,26 @@ After assignment, the component calls `attachMedia(internalVideo)` + `startLoad(
 |---|---|
 | **`hls.js`** (consumer-installed) | Version with the I-frame trick-play API: `hls.iframeVariants` + `hls.createIFramePlayer()` + `hlsIframesOnly.loadMediaAt()`. Currently this lives in [video-dev/hls.js#7757](https://github.com/video-dev/hls.js/pull/7757) on `master`; not yet in a published release. Once released, any version that exposes those methods works. |
 | **`media-chrome`** (consumer-installed) | The component slots into `<media-time-range>` and reads its `mediapreviewtime` attribute. |
-| **Stream content** | Must publish `#EXT-X-I-FRAME-STREAM-INF` variants in the master playlist (and `#EXT-X-I-FRAMES-ONLY` in each I-frame variant playlist). If absent, `hls.createIFramePlayer()` returns `null` and the preview popup stays empty. |
+| **Host video element** | An `<hls-video>` (or anything that exposes its hls.js instance as `.api`) inside the same `<media-controller>`, or addressed by `for="<id>"`. |
+| **Stream content** | Must publish `#EXT-X-I-FRAME-STREAM-INF` variants in the master playlist (and `#EXT-X-I-FRAMES-ONLY` in each I-frame variant playlist). If absent, no preview is created and the popup stays empty. |
 | **Browser** | Any browser with MSE + ES2022 (private class fields). All evergreen browsers. |
 
 ## API
 
 ### `<media-preview-hls-iframe>`
 
-**Properties**
-
-- `player` *(IFramePlayerLike \| null)* — Assign an object with `{ attachMedia(video), startLoad(), loadMediaAt(time), detachMedia?() }`. The component calls `attachMedia` + `startLoad` on assignment, `detachMedia` on reassignment / disconnect.
-
 **Attributes**
 
-- `mediapreviewtime` *(read-only, set by Media Chrome)* — Hover time in seconds. The component clamps negatives to 0 and forwards finite values to `player.loadMediaAt`.
+- `for` *(optional)* — id of the host element to bind to. Defaults to the `<hls-video>` inside the nearest `<media-controller>` ancestor.
+
+**Properties**
+
+- `player` *(read-only)* — the currently wired I-frame player, or `null`. Provided for inspection; the component owns its lifecycle.
 
 **Events**
 
-- `frame-rendered` — `CustomEvent<{ currentTime: number }>` fired each time the internal preview `<video>` emits `seeked`. Useful for observability/logging.
+- `iframe-player-ready` — `CustomEvent<{ player }>` fired each time a new I-frame player is wired up (initial mount + each stream switch). Fired *before* `attachMedia`, so listeners can subscribe to early events like `MEDIA_ATTACHING`.
+- `frame-rendered` — `CustomEvent<{ currentTime }>` fired each time a new frame is composited. Useful for observability/logging.
 
 **Internal `<video>`** — Created in shadow DOM with `muted`, `playsinline`, `tabindex="-1"`, `aria-hidden="true"`, and `pointer-events: none`. Purely a render target.
 
@@ -119,51 +81,29 @@ This component does **not** ship a VTT thumbnail fallback. If you want classic s
 
 ## Demo
 
-The `demo/` directory contains a minimal runnable example (single `<hls-video>` + `<media-controller>` + the component, ~25 lines of JS) showing the smallest end-to-end wiring against an Apple bipbop test stream.
+The `demo/` directory has two pages:
 
-A more involved diagnostics page (preset URL picker, `hls.iframeVariants` readout, event log) is preserved in `demo-out/` for reference.
-
-Live demo (auto-deployed via the included GitHub Pages workflow): https://pbs.github.io/media-preview-hls-iframe/
-
-## Repository layout
-
-```
-.
-├── src/
-│   ├── index.js                       # public entry (side-effect register)
-│   ├── media-preview-hls-iframe.js    # the component
-│   └── media-preview-hls-iframe.d.ts  # TypeScript declarations
-├── demo/
-│   ├── index.html
-│   ├── main.js
-│   ├── styles.css
-│   └── vite.config.js                 # demo dev/build config
-├── vendor/
-│   └── hls.js/dist/hls.mjs            # temporary: hand-copied pending an upstream npm release with the I-frame API (see PR #7757)
-├── vite.config.js                     # library build config
-└── package.json
-```
+- `index.html` — minimal end-to-end example: one `<hls-video>` + one `<media-controller>` + the component, no script glue.
+- `advanced.html` — preset URL picker, `hls.iframeVariants` readout, event log, rendition menu with codec.
 
 ## Local development
 
 ```bash
 npm install
+npm run build      # populates dist/ and mirrors the built JS into demo/lib/
 npm run dev        # demo dev server at http://localhost:5173
 ```
 
-The demo loads hls.js from [`vendor/hls.js/dist/hls.mjs`](./vendor/hls.js/dist/hls.mjs) via a Vite alias ([`demo/vite.config.js`](./demo/vite.config.js)). This is a temporary hand-copied build pending an upstream npm release that includes the I-frame trick-play API ([video-dev/hls.js#7757](https://github.com/video-dev/hls.js/pull/7757)); once that ships, the demo will switch to the published `hls.js` package and the vendor copy will be removed.
+`demo/` is fully self-contained: `index.html` is a static template, and `npm run build` copies the built component into `demo/lib/`. The simple demo's importmap resolves `@pbs/...` to that sibling path, so you can serve the demo folder anywhere — `cd demo && python3 -m http.server` works, no Vite required. The advanced demo still goes through Vite (richer JS module, no importmap), but `vite.config.js` aliases `@pbs/...` to the same `demo/lib/` file, so both demos agree on which component build they're exercising.
 
-To build the library tarball for publishing:
+A single [vite.config.js](./vite.config.js) handles both jobs — the library build (`vite build --mode library` → `dist/`) and the demo build (`vite build` → `dist-demo/`). `npm run build:demo` chains them so the alias target exists before the demo bundle reads it.
+
+The demo pins hls.js to `@canary` ([package.json](./package.json)) so it tracks the bleeding-edge build that contains the unreleased I-frame trick-play API ([video-dev/hls.js#7757](https://github.com/video-dev/hls.js/pull/7757)). Once that API ships in a stable release, the pin can be relaxed to a normal version range.
+
+To preview what publishing produces:
 
 ```bash
-npm run build      # → dist/media-preview-hls-iframe.{js,d.ts}
 npm pack --dry-run # preview what will go on npm
-```
-
-To build the demo site for GitHub Pages:
-
-```bash
-npm run build:demo # → dist-demo/
 ```
 
 ## License
