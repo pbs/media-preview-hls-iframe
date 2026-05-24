@@ -10,7 +10,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-var _player, _video, _rvfcHandle, _lastLoadedTime, _pollHandle, _currentApi, _emit, _onFrame, _onSeeked, _MediaPreviewHlsIframe_instances, watch_fn, installPlayer_fn, detachPlayer_fn, findHostVideo_fn;
+var _player, _video, _image, _rvfcHandle, _lastLoadedTime, _pollHandle, _currentApi, _emit, _onFrame, _onSeeked, _onImageLoad, _MediaPreviewHlsIframe_instances, watch_fn, installPlayer_fn, detachPlayer_fn, findHostVideo_fn;
 const TEMPLATE = `
   <style>
     :host {
@@ -22,15 +22,19 @@ const TEMPLATE = `
       overflow: hidden;
       position: relative;
     }
-    video {
+    video, img {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: fill;
       pointer-events: none;
     }
+    img { display: none; }
+    :host([data-renderer="image"]) video { display: none; }
+    :host([data-renderer="image"]) img { display: block; }
   </style>
   <video muted playsinline tabindex="-1" aria-hidden="true"></video>
+  <img alt="" aria-hidden="true">
   <slot></slot>
 `;
 class MediaPreviewHlsIframe extends HTMLElement {
@@ -39,6 +43,7 @@ class MediaPreviewHlsIframe extends HTMLElement {
     __privateAdd(this, _MediaPreviewHlsIframe_instances);
     __privateAdd(this, _player, null);
     __privateAdd(this, _video);
+    __privateAdd(this, _image);
     __privateAdd(this, _rvfcHandle, null);
     __privateAdd(this, _lastLoadedTime, -Infinity);
     __privateAdd(this, _pollHandle, null);
@@ -60,15 +65,20 @@ class MediaPreviewHlsIframe extends HTMLElement {
     // currentTime actually changes — won't catch repaints on same I-frame, but
     // it's the best we can do without rVFC.
     __privateAdd(this, _onSeeked, () => __privateGet(this, _emit).call(this, __privateGet(this, _video).currentTime));
+    // For MJPG image I-frame players we don't have a presentation-time signal —
+    // the closest analog is the time we asked the player to load.
+    __privateAdd(this, _onImageLoad, () => __privateGet(this, _emit).call(this, __privateGet(this, _lastLoadedTime)));
     this.attachShadow({ mode: "open" });
     const root = this.shadowRoot;
     root.innerHTML = TEMPLATE;
     __privateSet(this, _video, root.querySelector("video"));
+    __privateSet(this, _image, root.querySelector("img"));
     if (typeof __privateGet(this, _video).requestVideoFrameCallback === "function") {
       __privateSet(this, _rvfcHandle, __privateGet(this, _video).requestVideoFrameCallback(__privateGet(this, _onFrame)));
     } else {
       __privateGet(this, _video).addEventListener("seeked", __privateGet(this, _onSeeked));
     }
+    __privateGet(this, _image).addEventListener("load", __privateGet(this, _onImageLoad));
   }
   connectedCallback() {
     if (__privateGet(this, _pollHandle) != null) return;
@@ -82,6 +92,7 @@ class MediaPreviewHlsIframe extends HTMLElement {
     __privateSet(this, _currentApi, null);
     __privateMethod(this, _MediaPreviewHlsIframe_instances, detachPlayer_fn).call(this);
     __privateGet(this, _video).removeEventListener("seeked", __privateGet(this, _onSeeked));
+    __privateGet(this, _image).removeEventListener("load", __privateGet(this, _onImageLoad));
     if (__privateGet(this, _rvfcHandle) != null && __privateGet(this, _video).cancelVideoFrameCallback) {
       __privateGet(this, _video).cancelVideoFrameCallback(__privateGet(this, _rvfcHandle));
       __privateSet(this, _rvfcHandle, null);
@@ -102,6 +113,7 @@ class MediaPreviewHlsIframe extends HTMLElement {
 }
 _player = new WeakMap();
 _video = new WeakMap();
+_image = new WeakMap();
 _rvfcHandle = new WeakMap();
 _lastLoadedTime = new WeakMap();
 _pollHandle = new WeakMap();
@@ -109,6 +121,7 @@ _currentApi = new WeakMap();
 _emit = new WeakMap();
 _onFrame = new WeakMap();
 _onSeeked = new WeakMap();
+_onImageLoad = new WeakMap();
 _MediaPreviewHlsIframe_instances = new WeakSet();
 // Watch the host hls-video for changes to its hls.js instance. Every time a
 // new instance appears (initial mount, src swap, element replacement) we
@@ -126,11 +139,18 @@ watch_fn = function() {
       __privateMethod(this, _MediaPreviewHlsIframe_instances, detachPlayer_fn).call(this);
       if (api) {
         api.once("hlsInitPtsFound", () => {
-          var _a2;
           if (!this.isConnected || __privateGet(this, _currentApi) !== api) return;
-          if ((_a2 = api.iframeVariants) == null ? void 0 : _a2.length) {
-            __privateMethod(this, _MediaPreviewHlsIframe_instances, installPlayer_fn).call(this, api.createIFramePlayer());
+          const variants = api.iframeVariants;
+          if (!(variants == null ? void 0 : variants.length)) return;
+          const hasImage = variants.some((v) => !!(v == null ? void 0 : v.imageCodec));
+          if (hasImage && typeof api.createImageIFramePlayer === "function") {
+            const imagePlayer = api.createImageIFramePlayer();
+            if (imagePlayer) {
+              __privateMethod(this, _MediaPreviewHlsIframe_instances, installPlayer_fn).call(this, imagePlayer, "image");
+              return;
+            }
           }
+          __privateMethod(this, _MediaPreviewHlsIframe_instances, installPlayer_fn).call(this, api.createIFramePlayer(), "video");
         });
       }
     }
@@ -138,15 +158,25 @@ watch_fn = function() {
   };
   tick();
 };
-installPlayer_fn = function(player) {
+installPlayer_fn = function(player, kind) {
+  var _a, _b;
   if (!player) return;
   __privateMethod(this, _MediaPreviewHlsIframe_instances, detachPlayer_fn).call(this);
   __privateSet(this, _player, player);
   __privateSet(this, _lastLoadedTime, -Infinity);
+  if (kind === "image") {
+    this.setAttribute("data-renderer", "image");
+  } else {
+    this.removeAttribute("data-renderer");
+  }
   this.dispatchEvent(
     new CustomEvent("iframe-player-ready", { detail: { player } })
   );
-  player.attachMedia(__privateGet(this, _video));
+  if (kind === "image") {
+    (_a = player.attachImage) == null ? void 0 : _a.call(player, __privateGet(this, _image));
+  } else {
+    (_b = player.attachMedia) == null ? void 0 : _b.call(player, __privateGet(this, _video));
+  }
 };
 detachPlayer_fn = function() {
   var _a, _b;
@@ -157,6 +187,10 @@ detachPlayer_fn = function() {
   }
   __privateSet(this, _player, null);
   __privateSet(this, _lastLoadedTime, -Infinity);
+  this.removeAttribute("data-renderer");
+  if (__privateGet(this, _image).src) {
+    __privateGet(this, _image).removeAttribute("src");
+  }
 };
 // Either an explicit `for="<id>"` attribute or the <hls-video> inside the
 // nearest <media-controller>.

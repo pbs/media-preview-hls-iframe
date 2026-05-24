@@ -9,33 +9,46 @@ const TEMPLATE = `
       overflow: hidden;
       position: relative;
     }
-    video {
+    video, img {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: fill;
       pointer-events: none;
     }
+    img { display: none; }
+    :host([data-renderer="image"]) video { display: none; }
+    :host([data-renderer="image"]) img { display: block; }
   </style>
   <video muted playsinline tabindex="-1" aria-hidden="true"></video>
+  <img alt="" aria-hidden="true">
   <slot></slot>
 `;
 
 /**
  * Minimal duck-typed contract for the I-frame player the component manages.
- * Matches the surface exposed by hls.js's HlsIFramesOnly (PR #7757).
+ * Matches the surface exposed by hls.js's HlsIFramesOnly + HlsImageIFramesOnly.
+ * Video players implement `attachMedia`; image (MJPG) players implement
+ * `attachImage` instead.
  */
 export interface IFramePlayerLike {
-  attachMedia(videoEl: HTMLVideoElement): void;
+  attachMedia?(videoEl: HTMLVideoElement): void;
+  attachImage?(imageEl: HTMLImageElement): void;
   loadMediaAt(time: number, options?: unknown): void;
   detachMedia?(): void;
+  detachImage?(): void;
   destroy?(): void;
+}
+
+interface IFrameVariantLike {
+  imageCodec?: string;
 }
 
 interface HlsLikeApi {
   once(event: string, handler: () => void): void;
-  iframeVariants?: unknown[];
+  iframeVariants?: IFrameVariantLike[];
   createIFramePlayer(): IFramePlayerLike;
+  createImageIFramePlayer?(): IFramePlayerLike | null;
 }
 
 interface HostVideoLike extends HTMLElement {
@@ -49,9 +62,12 @@ interface HostVideoLike extends HTMLElement {
  * The element finds its `<hls-video>` host automatically — the one inside the
  * nearest `<media-controller>` ancestor, or any element pointed to by
  * `for="<id>"`. When the host's hls.js instance fires `INIT_PTS_FOUND`, the
- * component creates an I-frame player, attaches it to its internal `<video>`,
- * and starts rendering frames on each hover. If the host's hls.js instance
- * changes (src swap, element replacement) it tears down and re-wires.
+ * component creates an I-frame player and starts rendering frames on each
+ * hover. If any iframe variant exposes an MJPG image codec, it uses
+ * `createImageIFramePlayer()` and renders into an internal `<img>`;
+ * otherwise it falls back to `createIFramePlayer()` and an internal `<video>`.
+ * If the host's hls.js instance changes (src swap, element replacement) it
+ * tears down and re-wires.
  *
  * The component observes Media Chrome's `mediapreviewtime` attribute and
  * calls `player.loadMediaAt(t)` for each hover.
@@ -68,6 +84,7 @@ export class MediaPreviewHlsIframe extends HTMLElement {
 
   #player: IFramePlayerLike | null = null;
   readonly #video: HTMLVideoElement;
+  readonly #image: HTMLImageElement;
   #rvfcHandle: number | null = null;
   #lastLoadedTime = -Infinity;
   #pollHandle: number | null = null;
@@ -90,6 +107,9 @@ export class MediaPreviewHlsIframe extends HTMLElement {
   // currentTime actually changes — won't catch repaints on same I-frame, but
   // it's the best we can do without rVFC.
   #onSeeked = (): void => this.#emit(this.#video.currentTime);
+  // For MJPG image I-frame players we don't have a presentation-time signal —
+  // the closest analog is the time we asked the player to load.
+  #onImageLoad = (): void => this.#emit(this.#lastLoadedTime);
 
   constructor() {
     super();
@@ -97,11 +117,13 @@ export class MediaPreviewHlsIframe extends HTMLElement {
     const root = this.shadowRoot!;
     root.innerHTML = TEMPLATE;
     this.#video = root.querySelector('video')!;
+    this.#image = root.querySelector('img')!;
     if (typeof this.#video.requestVideoFrameCallback === 'function') {
       this.#rvfcHandle = this.#video.requestVideoFrameCallback(this.#onFrame);
     } else {
       this.#video.addEventListener('seeked', this.#onSeeked);
     }
+    this.#image.addEventListener('load', this.#onImageLoad);
   }
 
   connectedCallback(): void {
@@ -117,6 +139,7 @@ export class MediaPreviewHlsIframe extends HTMLElement {
     this.#currentApi = null;
     this.#detachPlayer();
     this.#video.removeEventListener('seeked', this.#onSeeked);
+    this.#image.removeEventListener('load', this.#onImageLoad);
     if (this.#rvfcHandle != null && this.#video.cancelVideoFrameCallback) {
       this.#video.cancelVideoFrameCallback(this.#rvfcHandle);
       this.#rvfcHandle = null;
@@ -162,9 +185,19 @@ export class MediaPreviewHlsIframe extends HTMLElement {
           // keeps this component free of a direct hls.js import.
           api.once('hlsInitPtsFound', () => {
             if (!this.isConnected || this.#currentApi !== api) return;
-            if (api.iframeVariants?.length) {
-              this.#installPlayer(api.createIFramePlayer());
+            const variants = api.iframeVariants;
+            if (!variants?.length) return;
+            // Prefer MJPG image I-frame variants when present: they're cheaper
+            // to decode and avoid spinning up an MSE pipeline for previews.
+            const hasImage = variants.some((v) => !!v?.imageCodec);
+            if (hasImage && typeof api.createImageIFramePlayer === 'function') {
+              const imagePlayer = api.createImageIFramePlayer();
+              if (imagePlayer) {
+                this.#installPlayer(imagePlayer, 'image');
+                return;
+              }
             }
+            this.#installPlayer(api.createIFramePlayer(), 'video');
           });
         }
       }
@@ -173,16 +206,28 @@ export class MediaPreviewHlsIframe extends HTMLElement {
     tick();
   }
 
-  #installPlayer(player: IFramePlayerLike | null): void {
+  #installPlayer(
+    player: IFramePlayerLike | null,
+    kind: 'video' | 'image',
+  ): void {
     if (!player) return;
     this.#detachPlayer();
     this.#player = player;
     this.#lastLoadedTime = -Infinity;
-    // Fire before attachMedia so listeners can subscribe to MEDIA_ATTACHING etc.
+    if (kind === 'image') {
+      this.setAttribute('data-renderer', 'image');
+    } else {
+      this.removeAttribute('data-renderer');
+    }
+    // Fire before attach* so listeners can subscribe to MEDIA_ATTACHING etc.
     this.dispatchEvent(
       new CustomEvent('iframe-player-ready', { detail: { player } }),
     );
-    player.attachMedia(this.#video);
+    if (kind === 'image') {
+      player.attachImage?.(this.#image);
+    } else {
+      player.attachMedia?.(this.#video);
+    }
   }
 
   #detachPlayer(): void {
@@ -190,6 +235,11 @@ export class MediaPreviewHlsIframe extends HTMLElement {
     try { this.#player.destroy?.(); } catch { /* already torn down */ }
     this.#player = null;
     this.#lastLoadedTime = -Infinity;
+    this.removeAttribute('data-renderer');
+    // Drop the last decoded image so a re-attach starts from a clean slate.
+    if (this.#image.src) {
+      this.#image.removeAttribute('src');
+    }
   }
 
   // Either an explicit `for="<id>"` attribute or the <hls-video> inside the

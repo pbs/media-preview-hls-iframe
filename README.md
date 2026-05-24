@@ -58,7 +58,7 @@ Drop it into Media Chrome's `<media-time-range>` preview slot. Pair it with [`<h
 - `iframe-player-ready` — `CustomEvent<{ player }>` fired each time a new I-frame player is wired up (initial mount + each stream switch). Fired *before* `attachMedia`, so listeners can subscribe to early events like `MEDIA_ATTACHING`.
 - `frame-rendered` — `CustomEvent<{ currentTime }>` fired each time a new frame is composited. Useful for observability/logging.
 
-**Internal `<video>`** — Created in shadow DOM with `muted`, `playsinline`, `tabindex="-1"`, `aria-hidden="true"`, and `pointer-events: none`. Purely a render target.
+**Internal render target** — Created in shadow DOM with `aria-hidden="true"` and `pointer-events: none`. When the manifest exposes an MJPG-coded I-frame variant (image codec on `iframeVariants`), the component uses `hls.createImageIFramePlayer()` and renders into an `<img>`; otherwise it uses `hls.createIFramePlayer()` and renders into a `<video muted playsinline tabindex="-1">`. The host element gets a `data-renderer="image"` attribute while the image path is active.
 
 ## CSS
 

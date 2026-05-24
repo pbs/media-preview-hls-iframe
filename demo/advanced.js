@@ -122,11 +122,29 @@ function renderVariants(variants) {
   }
   variants.forEach((v, i) => {
     const tr = document.createElement('tr');
-    const codec = (v.videoCodec || v.codecSet || v.codecs || '').slice(0, 4);
+    const codec = (v.imageCodec || v.videoCodec || v.codecSet || v.codecs || '').slice(0, 4);
     const bitrate = v.bitrate ? `${Math.round(v.bitrate / 1000)} kbps` : '—';
     const res = v.width && v.height ? `${v.width}×${v.height}` : '—';
+    // Stash the variant URL so we can find this row when the preview player
+    // picks a level. The iframe instance constructs Level objects from these
+    // LevelParsed entries and stores `[data.url]` on `Level.url`, so URL is
+    // a stable join key — bitrate+resolution isn't, because hls.js merges
+    // codec-paired variants (e.g. AVC+HEVC at the same resolution) into a
+    // single Level with multiple URLs, and image players use a filtered
+    // subset of variants so indices don't line up either.
+    if (v.url) tr.dataset.url = v.url;
     tr.innerHTML = `<td>${i}</td><td>${res}</td><td>${bitrate}</td><td>${codec || '—'}</td>`;
     variantsBody.appendChild(tr);
+  });
+}
+
+function highlightActiveVariant(player) {
+  const rows = variantsBody.querySelectorAll('tr[data-url]');
+  const level = player?.levels?.[player.currentLevel];
+  const levelUrls = level?.url || (level?.uri ? [level.uri] : []);
+  rows.forEach((tr) => {
+    const matches = levelUrls.includes(tr.dataset.url);
+    tr.classList.toggle('active', matches);
   });
 }
 
@@ -141,6 +159,7 @@ function attachIframePlayerLoggers(player) {
     log('LEVEL_SWITCHED', { level: d.level });
     const lvl = player.levels?.[d.level];
     if (lvl) setIframePlayerStatus(`level ${d.level}: ${lvl.width || '?'}×${lvl.height || '?'}`);
+    highlightActiveVariant(player);
   });
   player.on(Hls.Events.FRAG_BUFFERED, (_, d) =>
     log('FRAG_BUFFERED', { sn: d.frag?.sn, start: +d.frag?.start?.toFixed?.(2), file: shortenUrl(d.frag?.url) }));
@@ -188,6 +207,19 @@ function freshVideoElement(url) {
   v.setAttribute('playsinline', '');
   v.muted = true;
   v.setAttribute('autoplay', '');
+  // hls-video-element merges `.config` into the hls.js constructor; it reads
+  // the value lazily inside `load()`, which is triggered by setting `src`,
+  // so set config BEFORE src. capLevelToPlayerSize keeps ABR from picking
+  // 4K renditions for a ~1100px-wide player (the adv_dv_atmos stream has
+  // 4K HEVC variants that would otherwise saturate the network and starve
+  // the I-frame playlist fetch behind them). ignoreDevicePixelRatio is
+  // required too: without it hls.js multiplies the CSS player size by the
+  // display's DPR (often 2 or 3), so a 1150px player gets treated as
+  // 2300–3450 effective pixels and the cap is effectively a no-op.
+  v.config = {
+    capLevelToPlayerSize: true,
+    ignoreDevicePixelRatio: true,
+  };
   v.setAttribute('src', url);
   oldVideo.replaceWith(v);
   return v;
@@ -218,6 +250,13 @@ async function load(url) {
     renderVariants(variants);
     log('MANIFEST_PARSED', { levels: data.levels?.length, iframeVariants: variants.length });
     if (!variants.length) setIframePlayerStatus('(no I-frame variants)');
+    // Workaround for a CapLevelController race: its ResizeObserver fires on
+    // initial observe (set up during attachMedia) BEFORE the master playlist
+    // is parsed, so detectPlayerSize bails on `levels.length > 1`. When
+    // MANIFEST_PARSED finally arrives, startCapping bails because the
+    // observer is already set, and detectPlayerSize never runs again until
+    // the player is resized. Re-trigger it manually now that levels exist.
+    hls.capLevelController?.detectPlayerSize?.();
   });
 
   hls.on(Hls.Events.ERROR, (_, data) => {
@@ -239,9 +278,12 @@ async function load(url) {
 // destroys the old one. We only attach diagnostic loggers each time.
 preview.addEventListener('iframe-player-ready', (e) => {
   const player = e.detail.player;
-  log('createIFramePlayer', { level: player.currentLevel });
-  setIframePlayerStatus(`level ${player.currentLevel}`);
+  // attachImage is only present on HlsImageIFramesOnly (MJPG image I-frames).
+  const isImage = typeof player.attachImage === 'function';
+  log(isImage ? 'createImageIFramePlayer' : 'createIFramePlayer', { level: player.currentLevel });
+  setIframePlayerStatus(`${isImage ? 'image ' : ''}level ${player.currentLevel}`);
   attachIframePlayerLoggers(player);
+  highlightActiveVariant(player);
 });
 
 // frame-rendered fires on every internal preview <video> 'seeked', so this

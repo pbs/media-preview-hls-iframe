@@ -48,11 +48,10 @@
   <script src="https://cdn.jsdelivr.net/npm/hls.js@canary/dist/hls.js"></script>
   <script>
     const STREAMS = [
-      { name: 'kothdt (live passthrough)', url: 'https://kothdt.lls.pbs.org/lls/kothdt/kothdt-hls-passthrough/index.m3u8' },
-      { name: 'pbs-bars (test pattern hevc/avc)', url: 'https://pbs.github.io/test-streams/pbs/test-pattern/pbs-bars_hevc-avc.m3u8' },
-      { name: 'snp_raronson (transparency 1080p)', url: 'https://ga.video.cdn.pbs.org/videos/pbs-standards/cd8831d8-2d76-4b8b-a271-02178645a4c0/2000257050/hd-16x9-mezzanine-1080p/snp_raronson_transparency-hls-16x9-1080p_881.m3u8' },
-      { name: 'aucl5104 (austin city limits)', url: 'https://ga.pbs-video.pbs.org/videos/austin-city-limits/ba4b5e59-c676-40b5-9827-09c0a6c9fdad/2000497362/hd-16x9-mezzanine-1080p/aucl5104-AABR-AVC_645.m3u8' },
-      { name: 'aucl5012 (austin city limits)', url: 'https://ga.pbs-video.pbs.org/videos/austin-city-limits/d21d75af-6ff1-45ea-8e5e-eb57a2026c60/2000461464/hd-16x9-mezzanine-1080p/aucl5012-AABR-AVC_908.m3u8' },
+      { name: 'PBS test pattern (HEVC, AVC, I-frame-only)', url: 'https://pbs.github.io/test-streams/pbs/test-pattern/pbs-bars_hevc-avc.m3u8' },
+      { name: 'Big Buck Bunny (Mux hosted, synthesized I-frames)', url: 'https://pbs.github.io/test-streams/test-streams.mux.dev/x36xhzz/x36xhzz.m3u8' },
+      { name: 'Apple bipbop_adv_example_hevc', url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8?88001' },
+      { name: 'Apple adv_dv_atmos (Dolby Vision + Atmos + iFrames + MJPG iFrames)', url: 'https://devstreaming-cdn.apple.com/videos/streaming/examples/adv_dv_atmos/main.m3u8' },
     ];
 
     const $log = document.getElementById('log');
