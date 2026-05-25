@@ -76,15 +76,13 @@
       Test stream .ts segments hosted by Mux at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a>.
     </footer>
 
-    <!-- The four importmap entries are *not* loaded directly by anything in
-         this page — they're transitive deps of hls-video-element, which
-         contains `import ... from 'custom-media-element'`,
-         `import ... from 'media-tracks'`, and
-         `import Hls from 'hls.js/dist/hls.mjs'`. The browser needs URLs for
-         those bare specifiers when it parses hls-video-element.js below.
-         `hls.js/` (trailing slash) pins canary — the only build with the
-         I-frame trick-play API (PR #7757). Raw jsDelivr ESM (no `+esm`) so
-         the bare imports survive and the importmap can rewrite them. -->
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js"></script>
+   
+    <!-- hls-video-element imports its own (older) hls.js; the importmap
+         redirects that to canary, the only build with the I-frame trick-play
+         API we need (video-dev/hls.js#7757). -->
     <script type="importmap">
       {
         "imports": {
@@ -95,8 +93,6 @@
         }
       }
     </script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js"></script>
     <script type="module">
       import 'media-preview-hls-iframe';
     </script>
