@@ -80,10 +80,11 @@ This component does **not** ship a VTT thumbnail fallback. If you want classic s
 
 ## Demo
 
-The `demo/` directory has two pages:
+The `demo/` directory has three pages:
 
 - `index.html` — minimal end-to-end example: one `<hls-video>` + one `<media-controller>` + the component.
 - `advanced.html` — preset URL picker, `hls.iframeVariants` readout, event log, custom rendition menu with codec.
+- `vanilla-hlsjs.html` — bare hls.js test harness (no Media Chrome, no component) for reproducing trick-play API behavior directly.
 
 ## Local development
 

@@ -50,11 +50,17 @@
     "build": "vite build --mode library && tsc",
     "build:demo": "npm run build && vite build",
     "preview:demo": "vite preview",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "peerDependencies": {
+    "hls-video-element": ">=1",
     "hls.js": "*",
     "media-chrome": ">=4"
+  },
+  "peerDependenciesMeta": {
+    "hls-video-element": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
@@ -62,7 +68,7 @@
     "hls-video-element": "^1.5.11",
     "hls.js": "canary",
     "media-chrome": "^4.19.0",
-    "typescript": "^6.0.3",
+    "typescript": "^5.9.3",
     "vite": "^5.4.10",
     "vitest": "^4.1.7"
   },
