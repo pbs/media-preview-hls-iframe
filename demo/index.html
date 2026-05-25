@@ -74,12 +74,10 @@
 
     <footer>
       Test stream .ts segments hosted by Mux at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a>.
+      · hls.js <code id="hlsVersion">…</code>
     </footer>
 
 
-    <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js"></script>
-    <script type="module" src="https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js"></script>
-   
     <!-- hls-video-element imports its own (older) hls.js; the importmap
          redirects that to canary, the only build with the I-frame trick-play
          API we need (video-dev/hls.js#7757). -->
@@ -93,8 +91,12 @@
         }
       }
     </script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js"></script>
     <script type="module">
       import 'media-preview-hls-iframe';
+      import Hls from 'hls.js/dist/hls.mjs';
+      document.getElementById('hlsVersion').textContent = `v${Hls.version}`;
     </script>
   </body>
 </html>
