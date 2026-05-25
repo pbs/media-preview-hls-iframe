@@ -17,6 +17,14 @@
   ],
   "author": "PBS",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pbs/media-preview-hls-iframe.git"
+  },
+  "homepage": "https://pbs.github.io/media-preview-hls-iframe/",
+  "bugs": {
+    "url": "https://github.com/pbs/media-preview-hls-iframe/issues"
+  },
   "type": "module",
   "main": "./dist/media-preview-hls-iframe.js",
   "module": "./dist/media-preview-hls-iframe.js",
@@ -30,8 +38,6 @@
   },
   "files": [
     "dist",
-    "src/media-preview-hls-iframe.ts",
-    "src/index.ts",
     "LICENSE",
     "README.md"
   ],
@@ -45,6 +51,10 @@
     "build:demo": "npm run build && vite build",
     "preview:demo": "vite preview",
     "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "hls.js": "*",
+    "media-chrome": ">=4"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

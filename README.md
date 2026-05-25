@@ -25,7 +25,6 @@ Drop it into Media Chrome's `<media-time-range>` preview slot. Pair it with [`<h
     <media-play-button></media-play-button>
     <media-time-range>
       <media-preview-hls-iframe slot="preview"></media-preview-hls-iframe>
-      <media-preview-time-display slot="preview"></media-preview-time-display>
     </media-time-range>
   </media-control-bar>
 </media-controller>
@@ -83,27 +82,29 @@ This component does **not** ship a VTT thumbnail fallback. If you want classic s
 
 The `demo/` directory has two pages:
 
-- `index.html` — minimal end-to-end example: one `<hls-video>` + one `<media-controller>` + the component, no script glue.
-- `advanced.html` — preset URL picker, `hls.iframeVariants` readout, event log, rendition menu with codec.
+- `index.html` — minimal end-to-end example: one `<hls-video>` + one `<media-controller>` + the component.
+- `advanced.html` — preset URL picker, `hls.iframeVariants` readout, event log, custom rendition menu with codec.
 
 ## Local development
 
 ```bash
 npm install
-npm run build      # populates dist/ and mirrors the built JS into demo/lib/
 npm run dev        # demo dev server at http://localhost:5173
+npm test           # unit tests (vitest)
+npm run test:e2e   # end-to-end tests (playwright)
+npm run build      # publishable ESM artifact in dist/
 ```
 
-`demo/` is fully self-contained: `index.html` is a static template, and `npm run build` copies the built component into `demo/lib/`. The simple demo's importmap resolves `@pbs/...` to that sibling path, so you can serve the demo folder anywhere — `cd demo && python3 -m http.server` works, no Vite required. The advanced demo still goes through Vite (richer JS module, no importmap), but `vite.config.js` aliases `@pbs/...` to the same `demo/lib/` file, so both demos agree on which component build they're exercising.
+The demo (`demo/index.html` and `demo/advanced.html`) is intentionally wired to fetch the *published* `media-preview-hls-iframe` from jsDelivr via its importmap, so it reflects what consumers actually see. Vite is configured to externalize the package — local changes to `src/` won't appear in the demo until they're published. For in-progress component work, drive the component through the unit / e2e tests rather than the demo.
 
-A single [vite.config.js](./vite.config.js) handles both jobs — the library build (`vite build --mode library` → `dist/`) and the demo build (`vite build` → `dist-demo/`). `npm run build:demo` chains them so the alias target exists before the demo bundle reads it.
+A single [vite.config.js](./vite.config.js) handles both jobs — the library build (`vite build --mode library` → `dist/`) and the demo build (`vite build` → `dist-demo/`).
 
 The demo pins hls.js to `@canary` ([package.json](./package.json)) so it tracks the bleeding-edge build that contains the unreleased I-frame trick-play API ([video-dev/hls.js#7757](https://github.com/video-dev/hls.js/pull/7757)). Once that API ships in a stable release, the pin can be relaxed to a normal version range.
 
 To preview what publishing produces:
 
 ```bash
-npm pack --dry-run # preview what will go on npm
+npm pack --dry-run
 ```
 
 ## License
