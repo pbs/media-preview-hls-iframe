@@ -29,5 +29,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # The demo's `import 'media-preview-hls-iframe'` is resolved by vite's
+      # dev server against the project's own package.json (name + main). dist/
+      # must exist before the dev server starts, or the e2e tests get an
+      # empty advanced.js and #preview.player never appears.
+      - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
