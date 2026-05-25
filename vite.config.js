@@ -84,6 +84,7 @@ const demoConfig = {
       input: {
         main: resolve(__dirname, 'demo/index.html'),
         advanced: resolve(__dirname, 'demo/advanced.html'),
+        'vanilla-hlsjs': resolve(__dirname, 'demo/vanilla-hlsjs.html'),
       },
       external: isExternal,
     },

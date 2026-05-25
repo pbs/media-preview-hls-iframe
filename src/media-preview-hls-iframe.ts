@@ -80,7 +80,7 @@ interface HostVideoLike extends HTMLElement {
  *   falling back to `seeked`).
  */
 export class MediaPreviewHlsIframe extends HTMLElement {
-  static readonly observedAttributes = ['mediapreviewtime'] as const;
+  static readonly observedAttributes = ['mediapreviewtime', 'for'] as const;
 
   #player: IFramePlayerLike | null = null;
   readonly #video: HTMLVideoElement;
@@ -156,6 +156,10 @@ export class MediaPreviewHlsIframe extends HTMLElement {
     _oldVal: string | null,
     newVal: string | null,
   ): void {
+    if (name === 'for') {
+      this.#syncHostApi();
+      return;
+    }
     if (name !== 'mediapreviewtime' || !this.#player || newVal == null) return;
     const t = parseFloat(newVal);
     if (!Number.isFinite(t) || t < 0) return;
@@ -176,34 +180,40 @@ export class MediaPreviewHlsIframe extends HTMLElement {
   #watch(): void {
     const tick = (): void => {
       if (!this.isConnected) return;
-      const api = this.#findHostVideo()?.api ?? null;
-      if (api !== this.#currentApi) {
-        this.#currentApi = api;
-        this.#detachPlayer();
-        if (api) {
-          // 'hlsInitPtsFound' === Hls.Events.INIT_PTS_FOUND. Using the string
-          // keeps this component free of a direct hls.js import.
-          api.once('hlsInitPtsFound', () => {
-            if (!this.isConnected || this.#currentApi !== api) return;
-            const variants = api.iframeVariants;
-            if (!variants?.length) return;
-            // Prefer MJPG image I-frame variants when present: they're cheaper
-            // to decode and avoid spinning up an MSE pipeline for previews.
-            const hasImage = variants.some((v) => !!v?.imageCodec);
-            if (hasImage && typeof api.createImageIFramePlayer === 'function') {
-              const imagePlayer = api.createImageIFramePlayer();
-              if (imagePlayer) {
-                this.#installPlayer(imagePlayer, 'image');
-                return;
-              }
-            }
-            this.#installPlayer(api.createIFramePlayer(), 'video');
-          });
-        }
-      }
+      this.#syncHostApi();
       this.#pollHandle = requestAnimationFrame(tick);
     };
     tick();
+  }
+
+  // Wires (or rewires) the I-frame player when the host's hls.js instance
+  // changes. Called every rAF by #watch and synchronously by `for` attribute
+  // changes via attributeChangedCallback.
+  #syncHostApi(): void {
+    if (!this.isConnected) return;
+    const api = this.#findHostVideo()?.api ?? null;
+    if (api === this.#currentApi) return;
+    this.#currentApi = api;
+    this.#detachPlayer();
+    if (!api) return;
+    // 'hlsInitPtsFound' === Hls.Events.INIT_PTS_FOUND. Using the string
+    // keeps this component free of a direct hls.js import.
+    api.once('hlsInitPtsFound', () => {
+      if (!this.isConnected || this.#currentApi !== api) return;
+      const variants = api.iframeVariants;
+      if (!variants?.length) return;
+      // Prefer MJPG image I-frame variants when present: they're cheaper
+      // to decode and avoid spinning up an MSE pipeline for previews.
+      const hasImage = variants.some((v) => !!v?.imageCodec);
+      if (hasImage && typeof api.createImageIFramePlayer === 'function') {
+        const imagePlayer = api.createImageIFramePlayer();
+        if (imagePlayer) {
+          this.#installPlayer(imagePlayer, 'image');
+          return;
+        }
+      }
+      this.#installPlayer(api.createIFramePlayer(), 'video');
+    });
   }
 
   #installPlayer(

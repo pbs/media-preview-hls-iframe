@@ -71,6 +71,9 @@
         aspect-ratio: 16 / 9;
         --media-preview-thumbnail-max-width: 480px;
       }
+      @media (max-width: 600px) {
+        media-controller { --media-preview-thumbnail-max-width: 240px; }
+      }
       hls-video {
         --media-object-fit: fill;
       }
@@ -288,7 +291,7 @@
     </section>
 
     <footer>
-      See also the <a href="./">simple demo</a>. · hls.js <code id="hlsVersion">…</code>
+      See also the <a href="./">simple demo</a> or the <a href="./vanilla-hlsjs.html">vanilla hls.js test harness</a>. · hls.js <code id="hlsVersion">…</code>
     </footer>
 
     <!-- Every dep is treated as external in vite.config.js, so bare imports in
