@@ -76,26 +76,29 @@
       Test stream .ts segments hosted by Mux at <a href="https://test-streams.mux.dev/" target="_blank" rel="noopener">test-streams.mux.dev</a>.
     </footer>
 
-    <!-- Raw jsdelivr ESM (no `+esm` rebundling) keeps bare imports intact so
-         the importmap can rewrite them. The `hls.js/` trailing-slash entry
-         catches hls-video-element's `import 'hls.js/dist/hls.mjs'` and pins
-         it to canary — the only build with the I-frame trick-play API
-         (PR #7757). custom-media-element + media-tracks are transitive deps
-         of hls-video-element. Every package is marked external in
-         vite.config.js so the bare imports in ./index.js survive the build
-         and the browser resolves them through this importmap. -->
+    <!-- The four importmap entries are *not* loaded directly by anything in
+         this page — they're transitive deps of hls-video-element, which
+         contains `import ... from 'custom-media-element'`,
+         `import ... from 'media-tracks'`, and
+         `import Hls from 'hls.js/dist/hls.mjs'`. The browser needs URLs for
+         those bare specifiers when it parses hls-video-element.js below.
+         `hls.js/` (trailing slash) pins canary — the only build with the
+         I-frame trick-play API (PR #7757). Raw jsDelivr ESM (no `+esm`) so
+         the bare imports survive and the importmap can rewrite them. -->
     <script type="importmap">
       {
         "imports": {
           "hls.js/": "https://cdn.jsdelivr.net/npm/hls.js@canary/",
           "custom-media-element": "https://cdn.jsdelivr.net/npm/custom-media-element/dist/custom-media-element.js",
           "media-tracks": "https://cdn.jsdelivr.net/npm/media-tracks/dist/index.js",
-          "media-chrome": "https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js",
-          "hls-video-element": "https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js",
           "media-preview-hls-iframe": "https://cdn.jsdelivr.net/npm/media-preview-hls-iframe@0/dist/media-preview-hls-iframe.js"
         }
       }
     </script>
-    <script type="module" src="./index.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js"></script>
+    <script type="module">
+      import 'media-preview-hls-iframe';
+    </script>
   </body>
 </html>
