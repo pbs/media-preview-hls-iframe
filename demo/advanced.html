@@ -291,12 +291,24 @@
       See also the <a href="./">simple demo</a>. · hls.js <code id="hlsVersion">…</code>
     </footer>
 
-    <!-- Vite bundles the other deps from node_modules; `media-preview-hls-iframe`
-         is treated as external (see vite.config.js) so the bare import stays in
-         the built advanced.js and resolves to jsDelivr via this importmap. -->
+    <!-- Every dep is treated as external in vite.config.js, so bare imports in
+         advanced.js survive the build and the browser resolves them through
+         this importmap. `hls.js/` (trailing slash) catches hls-video-element's
+         `import 'hls.js/dist/hls.mjs'` and pins canary (only build with the
+         I-frame trick-play API, PR #7757); the bare `hls.js` entry serves
+         advanced.js's `import Hls from 'hls.js'`. `media-chrome/menu` is its
+         own entry because trailing-slash mappings don't auto-resolve to
+         index.js the way Node's resolver does. -->
     <script type="importmap">
       {
         "imports": {
+          "hls.js": "https://cdn.jsdelivr.net/npm/hls.js@canary/dist/hls.mjs",
+          "hls.js/": "https://cdn.jsdelivr.net/npm/hls.js@canary/",
+          "custom-media-element": "https://cdn.jsdelivr.net/npm/custom-media-element/dist/custom-media-element.js",
+          "media-tracks": "https://cdn.jsdelivr.net/npm/media-tracks/dist/index.js",
+          "media-chrome": "https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js",
+          "media-chrome/menu": "https://cdn.jsdelivr.net/npm/media-chrome@4/dist/menu/index.js",
+          "hls-video-element": "https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js",
           "media-preview-hls-iframe": "https://cdn.jsdelivr.net/npm/media-preview-hls-iframe@0/dist/media-preview-hls-iframe.js"
         }
       }

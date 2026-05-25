@@ -81,10 +81,9 @@
          catches hls-video-element's `import 'hls.js/dist/hls.mjs'` and pins
          it to canary — the only build with the I-frame trick-play API
          (PR #7757). custom-media-element + media-tracks are transitive deps
-         of hls-video-element. The demo intentionally pulls the published
-         package from jsDelivr so it reflects what consumers see; Vite is
-         configured to treat `media-preview-hls-iframe` as external and
-         leave the bare import alone. -->
+         of hls-video-element. Every package is marked external in
+         vite.config.js so the bare imports in ./index.js survive the build
+         and the browser resolves them through this importmap. -->
     <script type="importmap">
       {
         "imports": {
@@ -97,10 +96,6 @@
         }
       }
     </script>
-    <script type="module">
-      import 'media-chrome';
-      import 'hls-video-element';
-      import 'media-preview-hls-iframe';
-    </script>
+    <script type="module" src="./index.js"></script>
   </body>
 </html>

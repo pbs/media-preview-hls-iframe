@@ -45,21 +45,36 @@ const libraryConfig = {
   ],
 };
 
-// The demo intentionally consumes the *published* package from jsDelivr
+// The demo intentionally consumes the *published* packages from jsDelivr
 // (see the importmaps in demo/index.html and demo/advanced.html), so it
-// reflects what consumers actually see. We mark `media-preview-hls-iframe`
-// as external in both dev pre-bundle and build, which leaves the bare import
-// untouched in the served/built scripts; the browser then resolves it via
-// the importmap. Local-only changes to src/ won't appear in the demo until
-// they're published — for in-progress component work, use the unit / e2e
-// tests, not the demo.
-const externalPackage = 'media-preview-hls-iframe';
+// reflects what consumers actually see. Every package listed below is
+// marked external in both dev pre-bundle and build, which leaves the bare
+// imports untouched in the served/built scripts; the browser then resolves
+// them via the importmap. Local-only changes to src/ won't appear in the
+// demo until they're published — for in-progress component work, use the
+// unit / e2e tests, not the demo.
+//
+// `hls.js` is matched as both bare ("hls.js") and subpath ("hls.js/dist/...")
+// because hls-video-element imports `hls.js/dist/hls.mjs` and advanced.js
+// imports `hls.js` directly.
+const externalPackages = [
+  'media-preview-hls-iframe',
+  'media-chrome',
+  'hls-video-element',
+  'custom-media-element',
+  'media-tracks',
+];
+const isExternal = (id) =>
+  externalPackages.includes(id) ||
+  externalPackages.some((p) => id.startsWith(p + '/')) ||
+  id === 'hls.js' ||
+  id.startsWith('hls.js/');
 
 const demoConfig = {
   root: resolve(__dirname, 'demo'),
   base: process.env.VITE_BASE || '/',
   optimizeDeps: {
-    exclude: [externalPackage],
+    exclude: [...externalPackages, 'hls.js'],
   },
   server: { port: 5173 },
   build: {
@@ -70,7 +85,7 @@ const demoConfig = {
         main: resolve(__dirname, 'demo/index.html'),
         advanced: resolve(__dirname, 'demo/advanced.html'),
       },
-      external: [externalPackage],
+      external: isExternal,
     },
   },
 };
