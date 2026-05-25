@@ -81,9 +81,10 @@
          catches hls-video-element's `import 'hls.js/dist/hls.mjs'` and pins
          it to canary — the only build with the I-frame trick-play API
          (PR #7757). custom-media-element + media-tracks are transitive deps
-         of hls-video-element. The @pbs/... entry points at the sibling
-         lib/ folder, populated by `npm run build`; after publication, swap
-         it for the CDN URL. -->
+         of hls-video-element. The demo intentionally pulls the published
+         package from jsDelivr so it reflects what consumers see; Vite is
+         configured to treat `media-preview-hls-iframe` as external and
+         leave the bare import alone. -->
     <script type="importmap">
       {
         "imports": {
@@ -92,7 +93,7 @@
           "media-tracks": "https://cdn.jsdelivr.net/npm/media-tracks/dist/index.js",
           "media-chrome": "https://cdn.jsdelivr.net/npm/media-chrome@4/dist/index.js",
           "hls-video-element": "https://cdn.jsdelivr.net/npm/hls-video-element@1/dist/hls-video-element.js",
-          "media-preview-hls-iframe": "./lib/media-preview-hls-iframe.js"
+          "media-preview-hls-iframe": "https://cdn.jsdelivr.net/npm/media-preview-hls-iframe@0/dist/media-preview-hls-iframe.js"
         }
       }
     </script>

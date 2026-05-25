@@ -291,6 +291,16 @@
       See also the <a href="./">simple demo</a>. · hls.js <code id="hlsVersion">…</code>
     </footer>
 
+    <!-- Vite bundles the other deps from node_modules; `media-preview-hls-iframe`
+         is treated as external (see vite.config.js) so the bare import stays in
+         the built advanced.js and resolves to jsDelivr via this importmap. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "media-preview-hls-iframe": "https://cdn.jsdelivr.net/npm/media-preview-hls-iframe@0/dist/media-preview-hls-iframe.js"
+        }
+      }
+    </script>
     <script type="module" src="./advanced.js"></script>
   </body>
 </html>

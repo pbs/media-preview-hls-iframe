@@ -7,7 +7,6 @@
 // and hls.js are runtime requirements of the consumer, not bundled here.
 
 import { defineConfig } from 'vite';
-import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -30,11 +29,10 @@ const libraryConfig = {
   },
   plugins: [
     {
-      // demo/lib/ is committed; this banner reminds anyone opening the built
-      // file that the source lives in src/. Uses `generateBundle` (not
-      // `renderChunk`) so the banner lands above esbuild's private-field
-      // helpers, which Vite injects at the top of the chunk after Rollup's
-      // renderChunk pass.
+      // Banner reminding anyone opening the built file that the source lives
+      // in src/. Uses `generateBundle` (not `renderChunk`) so the banner
+      // lands above esbuild's private-field helpers, which Vite injects at
+      // the top of the chunk after Rollup's renderChunk pass.
       name: 'built-file-banner',
       generateBundle(_, bundle) {
         for (const chunk of Object.values(bundle)) {
@@ -44,38 +42,24 @@ const libraryConfig = {
         }
       },
     },
-    {
-      // Mirror the built JS into demo/lib/ so the demo/ folder is fully
-      // self-contained — its importmap and the advanced demo's Vite alias
-      // both resolve here, and the folder can be deployed (or zipped up)
-      // without dragging the rest of the repo along.
-      name: 'mirror-to-demo-lib',
-      closeBundle() {
-        mkdirSync(resolve(__dirname, 'demo/lib'), { recursive: true });
-        for (const f of ['media-preview-hls-iframe.js', 'media-preview-hls-iframe.js.map']) {
-          copyFileSync(
-            resolve(__dirname, 'dist', f),
-            resolve(__dirname, 'demo/lib', f),
-          );
-        }
-      },
-    },
   ],
 };
 
-// Both demos resolve `media-preview-hls-iframe` to the same file the
-// static index.html importmap points to. Run `npm run build` first so the
-// alias target exists.
+// The demo intentionally consumes the *published* package from jsDelivr
+// (see the importmaps in demo/index.html and demo/advanced.html), so it
+// reflects what consumers actually see. We mark `media-preview-hls-iframe`
+// as external in both dev pre-bundle and build, which leaves the bare import
+// untouched in the served/built scripts; the browser then resolves it via
+// the importmap. Local-only changes to src/ won't appear in the demo until
+// they're published — for in-progress component work, use the unit / e2e
+// tests, not the demo.
+const externalPackage = 'media-preview-hls-iframe';
+
 const demoConfig = {
   root: resolve(__dirname, 'demo'),
   base: process.env.VITE_BASE || '/',
-  resolve: {
-    alias: [
-      {
-        find: /^media-preview-hls-iframe$/,
-        replacement: resolve(__dirname, 'demo/lib/media-preview-hls-iframe.js'),
-      },
-    ],
+  optimizeDeps: {
+    exclude: [externalPackage],
   },
   server: { port: 5173 },
   build: {
@@ -86,6 +70,7 @@ const demoConfig = {
         main: resolve(__dirname, 'demo/index.html'),
         advanced: resolve(__dirname, 'demo/advanced.html'),
       },
+      external: [externalPackage],
     },
   },
 };
